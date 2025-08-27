@@ -12,7 +12,8 @@ import {Roles} from "../utils/Roles.sol";
 contract StrategyRouter is AccessControl, ReentrancyGuard, Pausable {
     using SafeTransferLibNative for address;
 
-    address public immutable VAULT; // the sole vault allowed to push/pull funds
+    // NOTE: was immutable; now settable once to fix deploy wiring for tests / factory 2-step pattern.
+    address public VAULT; // the sole vault allowed to push/pull funds
 
     struct AdapterInfo { IStrategyAdapter adapter; uint16 weightBps; }
     AdapterInfo[] public adapters;
@@ -23,13 +24,23 @@ contract StrategyRouter is AccessControl, ReentrancyGuard, Pausable {
     event Allocated(uint256 amount);
     event Unwound(uint256 requested, uint256 returned);
     event Harvested(address adapter, uint256 harvestedNative);
+    event VaultSet(address indexed vault);
 
     modifier onlyVault() { require(msg.sender == VAULT, "NOT_VAULT"); _; }
 
     constructor(address _admin, address _vault) {
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(Roles.GOVERNANCE_ROLE, _admin);
+        // allow zero on deploy, then set via setVault()
         VAULT = _vault;
+    }
+
+    /// @notice One-time setter to bind the router to its vault.
+    function setVault(address _vault) external onlyRole(Roles.GOVERNANCE_ROLE) {
+        require(VAULT == address(0), "VAULT_ALREADY_SET");
+        require(_vault != address(0), "vault=0");
+        VAULT = _vault;
+        emit VaultSet(_vault);
     }
 
     receive() external payable {}
@@ -51,7 +62,7 @@ contract StrategyRouter is AccessControl, ReentrancyGuard, Pausable {
     function _validateWeights() internal view {
         uint256 sum;
         for (uint256 i; i < adapters.length; i++) sum += adapters[i].weightBps;
-        require(sum == BPS_DENOM || adapters.length == 0, "weights!=100%" );
+        require(sum == BPS_DENOM || adapters.length == 0, "weights!=100%");
     }
 
     // === Allocation ===
