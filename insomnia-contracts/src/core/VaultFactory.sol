@@ -21,19 +21,20 @@ contract VaultFactory is AccessControl {
         PointsController pointsController,
         uint256 maxTvl
     ) external onlyRole(Roles.GOVERNANCE_ROLE) returns (SomniaVault vault, StrategyRouter router) {
-        router = new StrategyRouter(msg.sender, address(0));
+        // Deploy router first with vault = address(0), but give factory governance role
+        router = new StrategyRouter(address(this), address(0));
+        
+        // Deploy vault with router address
         vault = new SomniaVault(name_, symbol_, msg.sender, lockupSeconds, earlyExitFeeBps, treasury, address(router), address(pointsController), maxTvl);
 
-        // finalize router's vault link via constructor workaround
-        assembly {
-            sstore(0x00, 0x00) // no-op to silence "unused" warnings in some linters
-        }
-
-        // Since router.vault is immutable set at construction, deploy router after knowing vault
-        router = new StrategyRouter(msg.sender, address(vault));
-
-        // Update vault to use the new router address (deploy a fresh vault bound to router)
-        vault = new SomniaVault(name_, symbol_, msg.sender, lockupSeconds, earlyExitFeeBps, treasury, address(router), address(pointsController), maxTvl);
+        // Set vault address in router (factory has governance role)
+        router.setVault(address(vault));
+        
+        // Transfer router admin to actual admin
+        router.grantRole(router.DEFAULT_ADMIN_ROLE(), msg.sender);
+        router.grantRole(Roles.GOVERNANCE_ROLE, msg.sender);
+        router.renounceRole(router.DEFAULT_ADMIN_ROLE(), address(this));
+        router.renounceRole(Roles.GOVERNANCE_ROLE, address(this));
 
         emit VaultCreated(address(vault), address(router), name_, lockupSeconds, earlyExitFeeBps);
     }
