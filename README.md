@@ -98,6 +98,10 @@ export SOMNIA_RPC="https://dream-rpc.somnia.network/"
 
 * **PointsController:** [`0x185427782C214f1455180bf6f1E47Cd52E9096d6`](https://shannon-explorer.somnia.network/address/0x185427782C214f1455180bf6f1E47Cd52E9096d6)
 
+### Vault Factory
+
+* **VaultFactory:** [`0xC80Cb777c3740C63751430FAfdaD32524f69c5c2`](https://shannon-explorer.somnia.network/address/0xC80Cb777c3740C63751430FAfdaD32524f69c5c2)
+
 ---
 
 ## 📜 License
